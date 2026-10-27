@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ระบบตรวจและติดตามการส่งงาน ป.4 (KruCheck P.4)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS CDN สำหรับส่งออก Excel -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <!-- Google Fonts: Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- Top Header Navigation -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5">
+      <div class="flex items-center justify-between">
+        <!-- Logo -->
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('fast-entry')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 flex items-center justify-center text-white shadow-md shadow-indigo-100 font-bold text-xl">
+            ✓
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xl font-bold tracking-tight text-slate-900">
+                ครูเช็ค <span class="text-indigo-600">ป.4</span>
+              </span>
+              <span class="hidden sm:inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                KruCheck P.4
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 hidden md:block">
+              ระบบตรวจและติดตามการส่งงาน 4 ห้องเรียน (ป.4/1 - ป.4/4)
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Tools -->
+        <div class="flex items-center space-x-2">
+          <!-- Audio Toggle -->
+          <button id="btnSoundToggle" onclick="toggleSound()" class="p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span id="soundIcon">🔊</span>
+            <span id="soundText" class="hidden sm:inline">เปิดเสียง</span>
+          </button>
+
+          <!-- Export Excel All -->
+          <button onclick="exportExcelAll()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-xs flex items-center gap-1.5 transition-all">
+            <span>📊</span>
+            <span class="hidden sm:inline">ส่งออก Excel ทุกห้อง</span>
+          </button>
+
+          <!-- Backup Modal Button -->
+          <button onclick="openBackupModal()" class="p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-slate-200 text-sm" title="สำรอง/กู้คืนข้อมูล">
+            ⚙️
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs Bar -->
+    <div class="bg-slate-100/90 border-t border-slate-200 px-4 sm:px-6">
+      <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between py-2 gap-2">
+        <nav class="flex space-x-1 sm:space-x-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          <button id="tab-btn-fast-entry" onclick="switchTab('fast-entry')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap bg-indigo-600 text-white shadow-xs">
+            ⚡ โหมดตรวจงานด่วน
+          </button>
+          <button id="tab-btn-matrix" onclick="switchTab('matrix')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/70">
+            📊 ตารางสรุปผล (Matrix)
+          </button>
+          <button id="tab-btn-assignments" onclick="switchTab('assignments')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/70">
+            📝 จัดการใบงาน (<span id="nav-active-asm-count">10</span>/40)
+          </button>
+          <button id="tab-btn-students" onclick="switchTab('students')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/70">
+            👥 จัดการนักเรียน (<span id="nav-student-count">80</span> คน)
+          </button>
+        </nav>
+
+        <!-- Classroom Quick Selector -->
+        <div class="flex items-center space-x-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs self-start md:self-auto">
+          <span class="text-[11px] font-medium text-slate-400 px-2 hidden sm:inline">ห้อง:</span>
+          <button onclick="setActiveClassroom('p4_1')" class="room-btn px-2.5 py-1 rounded-lg text-xs font-semibold transition-all" data-room="p4_1">ป.4/1</button>
+          <button onclick="setActiveClassroom('p4_2')" class="room-btn px-2.5 py-1 rounded-lg text-xs font-semibold transition-all" data-room="p4_2">ป.4/2</button>
+          <button onclick="setActiveClassroom('p4_3')" class="room-btn px-2.5 py-1 rounded-lg text-xs font-semibold transition-all" data-room="p4_3">ป.4/3</button>
+          <button onclick="setActiveClassroom('p4_4')" class="room-btn px-2.5 py-1 rounded-lg text-xs font-semibold transition-all" data-room="p4_4">ป.4/4</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5">
+    
+    <!-- 1. TAB: Fast-Entry Grading Mode -->
+    <section id="view-fast-entry" class="space-y-6">
+      <!-- Selector Card -->
+      <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+          
+          <!-- Select Assignment -->
+          <div class="lg:col-span-7 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 inline-flex items-center justify-center text-xs">1</span>
+                เลือกใบงานที่ต้องการตรวจ
+              </label>
+              <div class="flex items-center space-x-1 text-xs text-slate-500">
+                <button onclick="stepAssignment(-1)" class="p-1 rounded-lg hover:bg-slate-100" title="ก่อนหน้า">◀</button>
+                <span id="fast-asm-indicator" class="text-[11px] font-medium text-slate-400">1 / 10</span>
+                <button onclick="stepAssignment(1)" class="p-1 rounded-lg hover:bg-slate-100" title="ถัดไป">▶</button>
+              </div>
+            </div>
+            <select id="fast-assignment-select" onchange="onFastAssignmentChange()" class="w-full pl-3.5 pr-8 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm sm:text-base font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-100 cursor-pointer shadow-2xs">
+            </select>
+          </div>
+
+          <!-- Select Classroom -->
+          <div class="lg:col-span-5 space-y-2">
+            <label class="text-xs font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
+              <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 inline-flex items-center justify-center text-xs">2</span>
+              เลือกห้องเรียน
+            </label>
+            <div class="grid grid-cols-4 gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+              <button onclick="setActiveClassroom('p4_1')" class="fast-room-tab py-2 px-1 rounded-lg text-xs font-semibold flex flex-col items-center justify-center" data-room="p4_1">
+                <span>ป.4/1</span>
+                <span class="text-[10px] text-slate-400 room-sub-stat" data-room="p4_1">0/20</span>
+              </button>
+              <button onclick="setActiveClassroom('p4_2')" class="fast-room-tab py-2 px-1 rounded-lg text-xs font-semibold flex flex-col items-center justify-center" data-room="p4_2">
+                <span>ป.4/2</span>
+                <span class="text-[10px] text-slate-400 room-sub-stat" data-room="p4_2">0/20</span>
+              </button>
+              <button onclick="setActiveClassroom('p4_3')" class="fast-room-tab py-2 px-1 rounded-lg text-xs font-semibold flex flex-col items-center justify-center" data-room="p4_3">
+                <span>ป.4/3</span>
+                <span class="text-[10px] text-slate-400 room-sub-stat" data-room="p4_3">0/20</span>
+              </button>
+              <button onclick="setActiveClassroom('p4_4')" class="fast-room-tab py-2 px-1 rounded-lg text-xs font-semibold flex flex-col items-center justify-center" data-room="p4_4">
+                <span>ป.4/4</span>
+                <span class="text-[10px] text-slate-400 room-sub-stat" data-room="p4_4">0/20</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div class="flex items-center space-x-3">
+            <span class="font-semibold text-slate-700">ความคืบหน้าห้อง <span id="fast-current-room-label">ป.4/1</span>:</span>
+            <span id="fast-stat-submitted" class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">ส่งแล้ว 0 คน</span>
+            <span id="fast-stat-missing" class="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold">ค้างส่ง 0 คน</span>
+          </div>
+          <div class="flex items-center space-x-2 w-full sm:w-60">
+            <div class="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+              <div id="fast-progress-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <span id="fast-progress-percent" class="font-bold text-slate-800 text-xs w-9 text-right">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Fast Entry Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Input & Numpad Area -->
+        <div class="lg:col-span-7 space-y-5">
+          <div class="bg-white rounded-2xl p-5 sm:p-7 border border-slate-200 shadow-sm relative">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center space-x-2 text-indigo-700">
+                <span class="text-xl">⌨️</span>
+                <span class="font-bold text-sm sm:text-base">ป้อนรหัสนักเรียน 4 หลัก (พิมพ์ / สแกน)</span>
+              </div>
+              <span class="text-xs bg-indigo-50 text-indigo-600 font-semibold px-2.5 py-1 rounded-full border border-indigo-100">
+                Auto-Submit เมื่อครบ 4 หลัก
+              </span>
+            </div>
+
+            <!-- 4-Digit Input -->
+            <div class="relative">
+              <input
+                id="code-input"
+                type="text"
+                inputmode="numeric"
+                maxlength="4"
+                placeholder="เช่น 4101"
+                class="w-full text-center text-4xl sm:text-5xl font-mono tracking-widest font-extrabold py-4 px-4 bg-slate-50 border-2 border-indigo-200 rounded-2xl text-slate-900 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all placeholder:text-slate-300 shadow-inner"
+              />
+              <button onclick="clearCodeInput()" class="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 bg-white/80 rounded-full text-base">✕</button>
+            </div>
+
+            <p class="mt-2 text-xs text-center text-slate-400">
+              💡 ตัวอย่างรหัส: ป.4/1 = <strong class="text-indigo-600 font-mono">4101 - 4120</strong>, ป.4/2 = <strong class="text-indigo-600 font-mono">4201 - 4220</strong>
+            </p>
+
+            <!-- Feedback Banner -->
+            <div id="fast-feedback-box" class="mt-4 min-h-[72px] flex items-center justify-center">
+              <div class="w-full p-3.5 rounded-xl border border-dashed border-slate-200 text-center text-slate-400 text-xs sm:text-sm">
+                พร้อมสแกนหรือพิมพ์รหัส 4 หลักเพื่อตรวจงาน
+              </div>
+            </div>
+
+            <!-- Touch Numpad for Tablet/Mobile -->
+            <div class="mt-5 pt-4 border-t border-slate-100">
+              <div class="text-xs font-semibold text-slate-500 mb-2 flex items-center justify-between">
+                <span>แป้นสัมผัสตัวเลข (สำหรับแท็บเล็ต/มือถือ):</span>
+                <span class="text-[11px] text-slate-400 font-mono" id="numpad-preview">พิมพ์: ____</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 sm:gap-2.5 max-w-sm mx-auto">
+                <button onclick="pressNumpad('1')" class="h-14 sm:h-16 rounded-xl bg-slate-100 hover:bg-indigo-50 active:bg-indigo-600 active:text-white text-slate-800 text-2xl font-bold font-mono border border-slate-200 shadow-2xs">1</button>
+                <button onclick="pressNumpad('2')" class="h-14 sm:h-16 rounded-xl bg-slate-100 hover:bg-indigo-50 active:bg-indigo-600 active:text-white text-slate-800 text-2xl font-bold font-mono border border-slate-200 shadow-2xs">2</button>
+                <button onclick="pressNumpad('3')" class="h-14 sm:h-16 rounded-xl bg-slate-100 hover:bg-indigo-50 active:bg-indigo-600 active:text-white text-slate-800 text-2xl font-bold font-mono border border-slate-200 shadow-2xs">3</button>
+                <button onclick="pressNumpad('4')" class="h-14 sm:h-16 rounded-xl bg-slate-100 hover:bg-indigo-50 active:bg-indigo-600 active:text-white text-slate-800 text-2xl font-bold font-mono border border-slate-200 shadow-2xs">4</button>
+                <button onclick="pressNumpad('5')" class="h-14 sm:h-16 rounded-xl bg-slate-100 hover:bg-indigo-50 active:bg-indigo-600 active:text-white text-slate-800 text-2xl font-bold font-mono border border-slate-200 shadow-2xs">5</button>
+                <button onclick="pressNumpad('6')" class="h-14 sm:h-16 rounded-xl bg-slate-100 hover:bg-indigo-50 active:bg-indigo-600 active:text-white text-slate-800 text-2xl font-bold font-mono border border-slate-200 shadow-2xs">6</button>
+                <button onclick="pressNumpad('7')" class="h-14 sm:h-16 rounded-xl bg-slate-100 hover:bg-indigo-50 active:bg-indigo-600 active:text-white text-slate-800 text-2xl font-bold font-mono border border-slate-200 shadow-2xs">7</button>
+                <button onclick="pressNumpad('8')" class="h-14 sm:h-16 rounded-xl bg-slate-100 hover:bg-indigo-50 active:bg-indigo-600 active:text-white text-slate-800 text-2xl font-bold font-mono border border-slate-200 shadow-2xs">8</button>
+                <button onclick="pressNumpad('9')" class="h-14 sm:h-16 rounded-xl bg-slate-100 hover:bg-indigo-50 active:bg-indigo-600 active:text-white text-slate-800 text-2xl font-bold font-mono border border-slate-200 shadow-2xs">9</button>
+                <button onclick="clearCodeInput()" class="h-14 sm:h-16 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs sm:text-sm font-bold border border-rose-200">ล้างรหัส</button>
+                <button onclick="pressNumpad('0')" class="h-14 sm:h-16 rounded-xl bg-slate-100 hover:bg-indigo-50 active:bg-indigo-600 active:text-white text-slate-800 text-2xl font-bold font-mono border border-slate-200 shadow-2xs">0</button>
+                <button onclick="backspaceNumpad()" class="h-14 sm:h-16 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xl font-bold border border-slate-300">⌫</button>
+              </div>
+              <div class="mt-3 max-w-sm mx-auto">
+                <button onclick="submitCurrentCode()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-2">
+                  <span>✓ บันทึกการส่งงาน (Enter)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Tap Student Grid -->
+          <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-bold text-sm text-slate-800 flex items-center gap-1.5">
+                <span>👤</span>
+                <span>แตะชื่อเพื่อตรวจได้โดยตรง (ห้อง <span id="fast-tap-room-name">ป.4/1</span>)</span>
+              </h3>
+              <span class="text-xs text-slate-400">คลิกที่การ์ดเพื่อสลับ ส่ง/ค้าง</span>
+            </div>
+            <div id="fast-student-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side: Recent Activity Logs & Undo -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col h-full min-h-[500px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div class="flex items-center space-x-2">
+                <span class="text-indigo-600 font-bold">⏱️</span>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base">ประวัติการตรวจงานล่าสุด</h3>
+              </div>
+              <span id="fast-logs-count" class="text-xs text-slate-400">0 รายการ</span>
+            </div>
+
+            <div id="fast-logs-container" class="flex-1 overflow-y-auto mt-3 space-y-2.5 pr-1 max-h-[560px]">
+              <!-- Dynamically populated logs -->
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400">
+              💡 คลิกปุ่ม "ยกเลิก" ด้านข้างรายการเพื่อย้อนสถานะได้ทันที
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. TAB: Matrix Summary View -->
+    <section id="view-matrix" class="hidden space-y-5">
+      <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-lg sm:text-xl font-bold text-slate-900">ตารางสรุปผลการส่งงาน (Matrix View)</h2>
+              <span id="matrix-room-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">ป.4/1</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+              คำนวณคะแนนเก็บเต็ม 30 คะแนนตามสัดส่วนใบงานที่เปิดใช้จริง (<span id="matrix-active-asms">10</span> ใบงาน)
+            </p>
+          </div>
+
+          <!-- Export Buttons -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="exportExcelCurrentRoom()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold border border-slate-300 flex items-center gap-1.5">
+              <span>📄</span>
+              <span>ดาวน์โหลด Excel (<span id="btn-export-room-name">ป.4/1</span>)</span>
+            </button>
+            <button onclick="exportExcelAll()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold shadow-xs flex items-center gap-1.5">
+              <span>📊</span>
+              <span>ส่งออก Excel รวมทุกห้อง</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Room Tabs & Stats -->
+        <div class="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+            <button onclick="setActiveClassroom('p4_1')" class="matrix-room-tab px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold" data-room="p4_1">ป.4/1</button>
+            <button onclick="setActiveClassroom('p4_2')" class="matrix-room-tab px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold" data-room="p4_2">ป.4/2</button>
+            <button onclick="setActiveClassroom('p4_3')" class="matrix-room-tab px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold" data-room="p4_3">ป.4/3</button>
+            <button onclick="setActiveClassroom('p4_4')" class="matrix-room-tab px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold" data-room="p4_4">ป.4/4</button>
+          </div>
+
+          <div class="flex items-center space-x-3 text-xs sm:text-sm">
+            <div class="flex items-center space-x-1.5 bg-emerald-50 text-emerald-800 px-3 py-1 rounded-lg border border-emerald-200">
+              <span>🏆 คะแนนเฉลี่ย:</span>
+              <strong id="matrix-stat-avg-score">0.00 / 30</strong>
+            </div>
+            <div class="flex items-center space-x-1.5 bg-indigo-50 text-indigo-800 px-3 py-1 rounded-lg border border-indigo-200">
+              <span>✅ ส่งครบ 100%:</span>
+              <strong id="matrix-stat-complete-count">0 คน</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters & Search -->
+      <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div class="relative flex-1 max-w-md">
+          <input
+            id="matrix-search"
+            type="text"
+            oninput="renderMatrixTable()"
+            placeholder="ค้นหาชื่อ, เลขที่ หรือรหัส 4 หลัก..."
+            class="w-full pl-3 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-indigo-500"
+          />
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <select id="matrix-filter" onchange="renderMatrixTable()" class="bg-slate-50 border border-slate-300 py-1.5 px-2.5 rounded-xl font-medium text-slate-700">
+            <option value="all">แสดงนักเรียนทั้งหมด</option>
+            <option value="missing_only">เฉพาะคนที่มีงานค้าง</option>
+            <option value="completed_only">เฉพาะคนที่ส่งครบแล้ว</option>
+          </select>
+          <select id="matrix-sort" onchange="renderMatrixTable()" class="bg-slate-50 border border-slate-300 py-1.5 px-2.5 rounded-xl font-medium text-slate-700">
+            <option value="number">เรียงตามเลขที่</option>
+            <option value="code">เรียงตามรหัส 4 หลัก</option>
+            <option value="name">เรียงตามชื่อ - นามสกุล</option>
+            <option value="score_desc">คะแนนเก็บ: มากไปน้อย</option>
+            <option value="score_asc">คะแนนเก็บ: น้อยไปมาก</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Matrix Table Container -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-3 bg-slate-50/80 border-b border-slate-200 flex flex-wrap items-center justify-between text-xs gap-3">
+          <div class="flex items-center space-x-4">
+            <span class="font-semibold text-slate-600">สัญลักษณ์:</span>
+            <span class="inline-flex items-center gap-1.5 text-emerald-700 font-semibold">
+              <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block shadow-2xs"></span>
+              <span>🟢 ส่งแล้ว (คลิกเพื่อแก้ไข)</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 text-rose-700 font-semibold">
+              <span class="w-3.5 h-3.5 rounded-full bg-rose-500 inline-block shadow-2xs"></span>
+              <span>🔴 ค้างส่ง (คลิกเพื่อตรวจ)</span>
+            </span>
+          </div>
+          <div class="text-slate-400">
+            * คลิกที่จุดสีในตารางเพื่อเปลี่ยนสถานะได้ทันที
+          </div>
+        </div>
+
+        <div class="overflow-x-auto max-h-[650px] relative">
+          <table class="w-full border-collapse text-left text-xs sm:text-sm">
+            <thead id="matrix-table-head" class="bg-slate-100 text-slate-700 sticky top-0 z-20 shadow-xs border-b border-slate-200">
+              <!-- Dynamically populated header -->
+            </thead>
+            <tbody id="matrix-table-body" class="divide-y divide-slate-100 text-slate-700">
+              <!-- Dynamically populated body -->
+            </tbody>
+            <tfoot id="matrix-table-foot" class="bg-slate-100 font-bold text-slate-800 border-t-2 border-slate-300 sticky bottom-0 z-20 shadow-md">
+              <!-- Dynamically populated footer -->
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. TAB: Assignments Manager -->
+    <section id="view-assignments" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-lg sm:text-xl font-bold text-slate-900">ระบบจัดการใบงาน (Assignments Manager)</h2>
+              <span class="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">สูงสุด 40 ใบงาน</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+              เปิด/ปิด (Enable/Disable) เพื่อเลือกคิดคะแนนเฉพาะใบงานที่เปิดใช้จริง (คะแนนเต็ม 30 จะเฉลี่ยตามจำนวนใบงานที่เปิดใช้)
+            </p>
+          </div>
+          <div class="px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-xl text-center">
+            <div id="asm-active-badge-count" class="text-xl font-extrabold text-indigo-600 font-mono">10 / 40</div>
+            <div class="text-[11px] font-semibold text-indigo-900">ใบงานที่คิดคะแนน</div>
+          </div>
+        </div>
+
+        <!-- Presets -->
+        <div class="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs text-slate-500 font-medium">ชุดใบงานด่วน:</span>
+            <button onclick="presetAssignments(10)" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200">เปิด 10 ใบแรก (01 - 10)</button>
+            <button onclick="presetAssignments(15)" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200">เปิด 15 ใบแรก (01 - 15)</button>
+            <button onclick="presetAssignments(40)" class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold border border-emerald-200">เปิดทั้งหมด 40 ใบ</button>
+            <button onclick="presetAssignments(0)" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200">ปิดทั้งหมด</button>
+          </div>
+          <div class="text-xs text-slate-400">
+            * ใบงานที่ปิดไว้จะไม่ถูกนำมาคำนวณคะแนนเก็บ 30 คะแนน
+          </div>
+        </div>
+      </div>
+
+      <!-- 40 Assignments Grid -->
+      <div id="assignments-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+        <!-- Dynamically populated 40 assignments -->
+      </div>
+    </section>
+
+    <!-- 4. TAB: Student Manager -->
+    <section id="view-students" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-lg sm:text-xl font-bold text-slate-900">ระบบจัดการรายชื่อนักเรียน (Student Management)</h2>
+              <span id="student-room-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">ป.4/1</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+              จัดการรหัส 4 หลัก, เลขที่, รายชื่อนักเรียน และนำเข้ารายชื่อแบบกลุ่ม
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="regenerateCodesCurrentRoom()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold border border-slate-300 flex items-center gap-1.5">
+              <span>🪄</span>
+              <span>สร้างรหัส 4 หลักอัตโนมัติ</span>
+            </button>
+            <button onclick="openBatchModal()" class="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs sm:text-sm font-semibold border border-indigo-200 flex items-center gap-1.5">
+              <span>📋</span>
+              <span>นำเข้าแบบกลุ่ม (Batch Import)</span>
+            </button>
+            <button onclick="openAddStudentModal()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-xs flex items-center gap-1.5">
+              <span>+ เพิ่มนักเรียนเดี่ยว</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-5 pt-4 border-t border-slate-100 flex items-center space-x-2 overflow-x-auto">
+          <button onclick="setActiveClassroom('p4_1')" class="student-room-tab px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2" data-room="p4_1">
+            <span>ป.4/1</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 student-room-count" data-room="p4_1">20 คน</span>
+          </button>
+          <button onclick="setActiveClassroom('p4_2')" class="student-room-tab px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2" data-room="p4_2">
+            <span>ป.4/2</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 student-room-count" data-room="p4_2">20 คน</span>
+          </button>
+          <button onclick="setActiveClassroom('p4_3')" class="student-room-tab px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2" data-room="p4_3">
+            <span>ป.4/3</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 student-room-count" data-room="p4_3">20 คน</span>
+          </button>
+          <button onclick="setActiveClassroom('p4_4')" class="student-room-tab px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2" data-room="p4_4">
+            <span>ป.4/4</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 student-room-count" data-room="p4_4">20 คน</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+          <div class="font-bold text-sm text-slate-800">
+            รายชื่อนักเรียน <span id="student-table-room-title">ป.4/1</span> (<span id="student-table-count">20</span> คน)
+          </div>
+          <div class="text-xs text-slate-400">รหัส 4 หลักสำหรับคีย์ตรวจงานด่วน</div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold">
+              <tr>
+                <th class="py-3 px-4 w-20 text-center">เลขที่</th>
+                <th class="py-3 px-4 w-36 text-center">รหัสนักเรียน (4 หลัก)</th>
+                <th class="py-3 px-6">ชื่อ - นามสกุล</th>
+                <th class="py-3 px-4 w-28 text-center">ห้องเรียน</th>
+                <th class="py-3 px-4 w-32 text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="student-table-body" class="divide-y divide-slate-100">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modals -->
+  <!-- 1. Add/Edit Student Modal -->
+  <div id="modal-student" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 id="modal-student-title" class="font-bold text-slate-900 text-base">เพิ่มนักเรียนใหม่</h3>
+        <button onclick="closeStudentModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <form id="form-student" onsubmit="saveStudentForm(event)" class="mt-4 space-y-4">
+        <input type="hidden" id="student-form-id" value="">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">เลขที่</label>
+            <input type="number" id="student-form-number" min="1" max="99" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">รหัส 4 หลัก</label>
+            <input type="text" id="student-form-code" maxlength="4" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono font-bold tracking-wider">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อ - นามสกุล</label>
+          <input type="text" id="student-form-name" required placeholder="เช่น เด็กชายมานะ ขยันดี" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+        </div>
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeStudentModal()" class="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">ยกเลิก</button>
+          <button type="submit" class="px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs">บันทึกข้อมูล</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Batch Import Modal -->
+  <div id="modal-batch" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-base">นำเข้ารายชื่อแบบกลุ่ม (Batch Import)</h3>
+        <button onclick="closeBatchModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <div class="mt-4 space-y-4">
+        <div class="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-900 space-y-1">
+          <p class="font-bold">คัดลอกรายชื่อมาวางในกล่องข้อความได้ทันที:</p>
+          <p>• รูปแบบมีเลขที่: <code>1. เด็กชายรักเรียน ขยันยิ่ง</code></p>
+          <p>• หรือวางชื่อต่อบรรทัด: ระบบจะรันเลขที่และสร้างรหัส 4 หลักให้อัตโนมัติ</p>
+        </div>
+        <textarea id="batch-textarea" rows="8" placeholder="1. เด็กชายสมชาย แสนดี&#10;2. เด็กหญิงมาลี มีสุข&#10;3. เด็กชายก้องภพ เจริญยิ่ง" class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-mono"></textarea>
+        <div class="flex items-center space-x-4 text-xs font-medium text-slate-700">
+          <label class="flex items-center space-x-1.5 cursor-pointer">
+            <input type="radio" name="batchMode" id="batch-mode-replace" value="replace" checked>
+            <span>แทนที่รายชื่อเดิมในห้องนี้</span>
+          </label>
+          <label class="flex items-center space-x-1.5 cursor-pointer">
+            <input type="radio" name="batchMode" id="batch-mode-append" value="append">
+            <span>เพิ่มต่อท้าย</span>
+          </label>
+        </div>
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+          <button onclick="closeBatchModal()" class="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">ยกเลิก</button>
+          <button onclick="executeBatchImport()" class="px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs">นำเข้าข้อมูลทันที</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Backup & Reset Modal -->
+  <div id="modal-backup" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-base">สำรองและกู้คืนข้อมูล (Backup & Restore)</h3>
+        <button onclick="closeBackupModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <p class="text-xs sm:text-sm text-slate-600">
+        ระบบบันทึกข้อมูลทั้งหมดลงใน LocalStorage ของเบราว์เซอร์อัตโนมัติ คุณสามารถดาวน์โหลดไฟล์ JSON เก็บไว้หรือกู้คืนได้
+      </p>
+      <div class="space-y-2.5">
+        <div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between bg-slate-50">
+          <div>
+            <div class="font-bold text-xs sm:text-sm text-slate-900">ดาวน์โหลดไฟล์สำรอง (JSON)</div>
+            <div class="text-[11px] text-slate-500">เก็บรายชื่อ ใบงาน และการส่งงานทั้งหมด</div>
+          </div>
+          <button onclick="downloadBackupJSON()" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold">ดาวน์โหลด</button>
+        </div>
+        <div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between bg-slate-50">
+          <div>
+            <div class="font-bold text-xs sm:text-sm text-slate-900">กู้คืนข้อมูลจากไฟล์ (JSON)</div>
+            <div class="text-[11px] text-slate-500">เลือกไฟล์ backup ที่เคยเซฟไว้</div>
+          </div>
+          <label class="px-3.5 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-semibold cursor-pointer">
+            <span>เลือกไฟล์</span>
+            <input type="file" accept=".json" onchange="uploadBackupJSON(event)" class="hidden">
+          </label>
+        </div>
+        <div class="p-3 rounded-xl border border-rose-200 flex items-center justify-between bg-rose-50/60">
+          <div>
+            <div class="font-bold text-xs sm:text-sm text-rose-950">รีเซ็ตข้อมูลตัวอย่าง (Demo Reset)</div>
+            <div class="text-[11px] text-rose-800">คืนค่าเริ่มต้นนักเรียน ป.4/1 - ป.4/4</div>
+          </div>
+          <button onclick="resetToDemoData()" class="px-3.5 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold">รีเซ็ต</button>
+        </div>
+      </div>
+      <div class="pt-2 text-right">
+        <button onclick="closeBackupModal()" class="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 bg-white py-4 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+      <div>
+        <strong class="text-slate-700">ครูเช็ค ป.4 (KruCheck P.4)</strong> • ป.4/1 ถึง ป.4/4 • คิดคะแนนเต็ม 30 คะแนน
+      </div>
+      <div>บันทึกใน LocalStorage อัตโนมัติ • รองรับ SheetJS (.xlsx)</div>
+    </div>
+  </footer>
+
+  <!-- Single-File JavaScript Core Application -->
+  <script>
+    // --- CLASSROOMS CONSTANTS ---
+    const CLASSROOMS = [
+      { id: 'p4_1', name: 'ชั้นประถมศึกษาปีที่ 4/1', shortName: 'ป.4/1' },
+      { id: 'p4_2', name: 'ชั้นประถมศึกษาปีที่ 4/2', shortName: 'ป.4/2' },
+      { id: 'p4_3', name: 'ชั้นประถมศึกษาปีที่ 4/3', shortName: 'ป.4/3' },
+      { id: 'p4_4', name: 'ชั้นประถมศึกษาปีที่ 4/4', shortName: 'ป.4/4' },
+    ];
+
+    // --- SOUND SYNTHESIZER (Web Audio API) ---
+    let soundEnabled = localStorage.getItem('krucheck_sound_enabled') !== 'false';
+    let audioCtx = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playSoundSuccess() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.frequency.setValueAtTime(1318.51, now);
+        gain1.gain.setValueAtTime(0.15, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.12);
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.frequency.setValueAtTime(1975.53, now + 0.08);
+        gain2.gain.setValueAtTime(0.2, now + 0.08);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.08);
+        osc2.stop(now + 0.28);
+      } catch (e) {}
+    }
+
+    function playSoundAlready() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(740, now + 0.1);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } catch (e) {}
+    }
+
+    function playSoundError() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.setValueAtTime(180, now + 0.1);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      } catch (e) {}
+    }
+
+    function playSoundUndo() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem('krucheck_sound_enabled', soundEnabled ? 'true' : 'false');
+      updateSoundUI();
+      if (soundEnabled) playSoundSuccess();
+    }
+
+    function updateSoundUI() {
+      document.getElementById('soundIcon').textContent = soundEnabled ? '🔊' : '🔇';
+      document.getElementById('soundText').textContent = soundEnabled ? 'เปิดเสียง' : 'ปิดเสียง';
+      document.getElementById('btnSoundToggle').className = soundEnabled
+        ? 'p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200'
+        : 'p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-slate-100 text-slate-400 border border-slate-200';
+    }
+
+    // --- DEFAULT SAMPLE DATA ---
+    function generate4DigitCode(room, no) {
+      const roomDigit = room.replace('p4_', '');
+      const paddedNo = String(no).padStart(2, '0');
+      return `4${roomDigit}${paddedNo}`;
+    }
+
+    function getInitialStudents() {
+      const names = [
+        "กรวิชญ์ พัฒนกุล", "กิตติศักดิ์ ศรีวิชัย", "จิรภัทร บุญญารัตน์", "ชานนท์ สุขเจริญ", "ณภัทร วรเดช",
+        "ธนดล วงศ์สุวรรณ", "ธีรภัทร พงษ์ศิริ", "นภัสรพี จันทรา", "ปัณณวิชญ์ เมธาวี", "พงศ์ภัค ชัยวัฒน์",
+        "กัญญารัตน์ ทองสุข", "จิตสุภา รุ่งเรือง", "ชนิกานต์ วรรณพร", "ณิชาภา บุญศรี", "ธัญญาดา สิทธิผล",
+        "นภัสสร อัมพวา", "ปวริศา รัตนโชติ", "พิชญา สุวรรณเวช", "ภัทรวดี ทรัพย์เจริญ", "ศุภิสรา ก้องเกียรติ"
+      ];
+      const students = [];
+      CLASSROOMS.forEach(c => {
+        for (let i = 1; i <= 20; i++) {
+          const prefix = i <= 10 ? 'เด็กชาย' : 'เด็กหญิง';
+          students.push({
+            id: `${c.id}_${i}`,
+            code: generate4DigitCode(c.id, i),
+            classroom: c.id,
+            number: i,
+            name: `${prefix}${names[i - 1]}`
+          });
+        }
+      });
+      return students;
+    }
+
+    function getInitialAssignments() {
+      const titles = [
+        'ใบงานที่ 1: ระบบสุริยะและดวงดาว',
+        'ใบงานที่ 2: สมบัติของสารและสถานะสสาร',
+        'ใบงานที่ 3: แรงโน้มถ่วงของโลก',
+        'ใบงานที่ 4: การจำแนกสิ่งมีชีวิตและพืช',
+        'ใบงานที่ 5: ส่วนประกอบของดอกไม้',
+        'ใบงานที่ 6: ห่วงโซ่อาหารและสายใยอาหาร',
+        'ใบงานที่ 7: แหล่งน้ำและการอนุรักษ์',
+        'ใบงานที่ 8: วงจรไฟฟ้าอย่างง่าย',
+        'ใบงานที่ 9: แสงและการมองเห็น',
+        'ใบงานที่ 10: แบบทดสอบวัดผลหน่วยที่ 1',
+      ];
+      const asms = [];
+      for (let i = 1; i <= 40; i++) {
+        const code = String(i).padStart(2, '0');
+        const title = titles[i - 1] || `ใบงานที่ ${i}: แบบฝึกหัดหน่วยการเรียนรู้ที่ ${Math.ceil(i / 5)}`;
+        asms.push({
+          id: `asm_${code}`,
+          code,
+          title,
+          enabled: i <= 10 // First 10 enabled by default
+        });
+      }
+      return asms;
+    }
+
+    function getInitialSubmissions(students, assignments) {
+      const subs = {};
+      const enabled = assignments.filter(a => a.enabled);
+      const now = new Date().toISOString();
+      students.forEach(s => {
+        enabled.forEach((a, idx) => {
+          if (Math.random() < 0.75 - idx * 0.03) {
+            subs[`${s.id}_${a.id}`] = { submittedAt: now };
+          }
+        });
+      });
+      return subs;
+    }
+
+    // --- APPLICATION STATE ---
+    let currentTab = 'fast-entry';
+    let currentRoom = 'p4_1';
+    let students = JSON.parse(localStorage.getItem('krucheck_students_s') || 'null') || getInitialStudents();
+    let assignments = JSON.parse(localStorage.getItem('krucheck_assignments_s') || 'null') || getInitialAssignments();
+    let submissions = JSON.parse(localStorage.getItem('krucheck_submissions_s') || 'null') || getInitialSubmissions(students, assignments);
+    let logs = JSON.parse(localStorage.getItem('krucheck_logs_s') || 'null') || [];
+    let selectedFastAssignmentId = assignments.find(a => a.enabled)?.id || assignments[0].id;
+
+    function saveState() {
+      localStorage.setItem('krucheck_students_s', JSON.stringify(students));
+      localStorage.setItem('krucheck_assignments_s', JSON.stringify(assignments));
+      localStorage.setItem('krucheck_submissions_s', JSON.stringify(submissions));
+      localStorage.setItem('krucheck_logs_s', JSON.stringify(logs.slice(0, 50)));
+      updateNavbarBadges();
+    }
+
+    function updateNavbarBadges() {
+      const activeAsms = assignments.filter(a => a.enabled).length;
+      document.getElementById('nav-active-asm-count').textContent = activeAsms;
+      document.getElementById('nav-student-count').textContent = students.length;
+    }
+
+    // --- NAVIGATION TAB SWITCHER ---
+    function switchTab(tab) {
+      currentTab = tab;
+      ['fast-entry', 'matrix', 'assignments', 'students'].forEach(t => {
+        const view = document.getElementById(`view-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tab) {
+          view.classList.remove('hidden');
+          btn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap bg-indigo-600 text-white shadow-xs';
+        } else {
+          view.classList.add('hidden');
+          btn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-white/70';
+        }
+      });
+
+      if (tab === 'fast-entry') renderFastEntry();
+      if (tab === 'matrix') renderMatrixTable();
+      if (tab === 'assignments') renderAssignments();
+      if (tab === 'students') renderStudents();
+    }
+
+    function setActiveClassroom(room) {
+      currentRoom = room;
+      document.querySelectorAll('.room-btn, .fast-room-tab, .matrix-room-tab, .student-room-tab').forEach(btn => {
+        if (btn.getAttribute('data-room') === room) {
+          btn.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+          btn.classList.remove('text-slate-600', 'text-slate-700');
+        } else {
+          btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
+          btn.classList.add('text-slate-600');
+        }
+      });
+
+      if (currentTab === 'fast-entry') renderFastEntry();
+      if (tab === 'matrix' || currentTab === 'matrix') renderMatrixTable();
+      if (currentTab === 'students') renderStudents();
+    }
+
+    // --- 1. FAST ENTRY LOGIC ---
+    function renderFastEntry() {
+      const enabledAsms = assignments.filter(a => a.enabled).sort((a,b) => a.code.localeCompare(b.code));
+      const sel = document.getElementById('fast-assignment-select');
+      sel.innerHTML = '';
+      enabledAsms.forEach((a, idx) => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = `[${a.code}] ${a.title}`;
+        if (a.id === selectedFastAssignmentId) opt.selected = true;
+        sel.appendChild(opt);
+      });
+
+      const currentIndex = enabledAsms.findIndex(a => a.id === selectedFastAssignmentId);
+      document.getElementById('fast-asm-indicator').textContent = `${currentIndex >= 0 ? currentIndex + 1 : 1} / ${enabledAsms.length}`;
+
+      // Update room counts on tabs
+      CLASSROOMS.forEach(c => {
+        const rStudents = students.filter(s => s.classroom === c.id);
+        const subCount = rStudents.filter(s => submissions[`${s.id}_${selectedFastAssignmentId}`]).length;
+        document.querySelectorAll(`.room-sub-stat[data-room="${c.id}"]`).forEach(el => {
+          el.textContent = `${subCount}/${rStudents.length}`;
+        });
+      });
+
+      // Progress bar
+      const roomStudents = students.filter(s => s.classroom === currentRoom);
+      const submittedCount = roomStudents.filter(s => submissions[`${s.id}_${selectedFastAssignmentId}`]).length;
+      const missingCount = roomStudents.length - submittedCount;
+      const percent = roomStudents.length > 0 ? Math.round((submittedCount / roomStudents.length) * 100) : 0;
+
+      const roomName = CLASSROOMS.find(c => c.id === currentRoom)?.shortName || currentRoom;
+      document.getElementById('fast-current-room-label').textContent = roomName;
+      document.getElementById('fast-tap-room-name').textContent = roomName;
+      document.getElementById('fast-stat-submitted').textContent = `ส่งแล้ว ${submittedCount} คน`;
+      document.getElementById('fast-stat-missing').textContent = `ค้างส่ง ${missingCount} คน`;
+      document.getElementById('fast-progress-bar').style.width = `${percent}%`;
+      document.getElementById('fast-progress-percent').textContent = `${percent}%`;
+
+      // Student Direct Tap Grid
+      const grid = document.getElementById('fast-student-grid');
+      grid.innerHTML = '';
+      roomStudents.sort((a,b) => a.number - b.number).forEach(s => {
+        const isSub = Boolean(submissions[`${s.id}_${selectedFastAssignmentId}`]);
+        const card = document.createElement('div');
+        card.className = `p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all active:scale-95 ${
+          isSub ? 'bg-emerald-50 border-emerald-300 text-emerald-950' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
+        }`;
+        card.innerHTML = `
+          <div class="flex items-center space-x-2.5 overflow-hidden">
+            <span class="w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${isSub ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}">${s.number}</span>
+            <div class="truncate">
+              <div class="text-xs font-semibold truncate">${s.name}</div>
+              <div class="text-[10px] text-slate-400 font-mono">รหัส ${s.code}</div>
+            </div>
+          </div>
+          <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${isSub ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}">
+            ${isSub ? '✓ ส่งแล้ว' : 'ค้างส่ง'}
+          </span>
+        `;
+        card.onclick = () => toggleSubmissionDirect(s.id, selectedFastAssignmentId);
+        grid.appendChild(card);
+      });
+
+      renderLogs();
+      const codeInput = document.getElementById('code-input');
+      codeInput.focus();
+    }
+
+    function onFastAssignmentChange() {
+      selectedFastAssignmentId = document.getElementById('fast-assignment-select').value;
+      renderFastEntry();
+    }
+
+    function stepAssignment(delta) {
+      const enabledAsms = assignments.filter(a => a.enabled).sort((a,b) => a.code.localeCompare(b.code));
+      const idx = enabledAsms.findIndex(a => a.id === selectedFastAssignmentId);
+      if (idx !== -1) {
+        const nextIdx = idx + delta;
+        if (nextIdx >= 0 && nextIdx < enabledAsms.length) {
+          selectedFastAssignmentId = enabledAsms[nextIdx].id;
+          renderFastEntry();
+        }
+      }
+    }
+
+    function pressNumpad(num) {
+      const input = document.getElementById('code-input');
+      if (input.value.length < 4) {
+        input.value += num;
+        document.getElementById('numpad-preview').textContent = `พิมพ์: ${input.value}`;
+        if (input.value.length === 4) {
+          submitCurrentCode();
+        }
+      }
+    }
+
+    function backspaceNumpad() {
+      const input = document.getElementById('code-input');
+      input.value = input.value.slice(0, -1);
+      document.getElementById('numpad-preview').textContent = `พิมพ์: ${input.value || '____'}`;
+      input.focus();
+    }
+
+    function clearCodeInput() {
+      const input = document.getElementById('code-input');
+      input.value = '';
+      document.getElementById('numpad-preview').textContent = 'พิมพ์: ____';
+      input.focus();
+    }
+
+    // Input event listener for keyboard typing
+    document.addEventListener('DOMContentLoaded', () => {
+      const codeInput = document.getElementById('code-input');
+      if (codeInput) {
+        codeInput.addEventListener('input', (e) => {
+          e.target.value = e.target.value.replace(/\D/g, '');
+          document.getElementById('numpad-preview').textContent = `พิมพ์: ${e.target.value || '____'}`;
+          if (e.target.value.length === 4) {
+            submitCurrentCode();
+          }
+        });
+        codeInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            submitCurrentCode();
+          }
+        });
+      }
+    });
+
+    function submitCurrentCode() {
+      const input = document.getElementById('code-input');
+      const code = input.value.trim();
+      if (!code) return;
+
+      // Find student by code
+      let student = students.find(s => s.classroom === currentRoom && s.code === code);
+      if (!student) {
+        // Search in other rooms
+        const otherRoomStudent = students.find(s => s.code === code);
+        if (otherRoomStudent) {
+          student = otherRoomStudent;
+          currentRoom = student.classroom;
+          setActiveClassroom(student.classroom);
+        }
+      }
+
+      // Also support typing 1 or 2 digits student number (e.g. 5)
+      if (!student && /^\d{1,2}$/.test(code)) {
+        const num = parseInt(code, 10);
+        student = students.find(s => s.classroom === currentRoom && s.number === num);
+      }
+
+      if (!student) {
+        playSoundError();
+        showFeedback('error', `ไม่พบรหัสนักเรียน "${code}" ในระบบ`);
+        clearCodeInput();
+        return;
+      }
+
+      const key = `${student.id}_${selectedFastAssignmentId}`;
+      const asm = assignments.find(a => a.id === selectedFastAssignmentId);
+
+      if (submissions[key]) {
+        playSoundAlready();
+        showFeedback('already', `ส่งงานไปแล้วเมื่อก่อนหน้านี้: เลขที่ ${student.number} ${student.name}`);
+        clearCodeInput();
+        return;
+      }
+
+      // Submit!
+      submissions[key] = { submittedAt: new Date().toISOString() };
+      const log = {
+        id: `${Date.now()}_${Math.random().toString(36).substring(2,6)}`,
+        studentId: student.id,
+        studentCode: student.code,
+        studentName: student.name,
+        classroom: student.classroom,
+        assignmentId: asm.id,
+        assignmentCode: asm.code,
+        assignmentTitle: asm.title,
+        timestamp: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        action: 'submit'
+      };
+      logs.unshift(log);
+      saveState();
+
+      playSoundSuccess();
+      showFeedback('success', `บันทึกสำเร็จ! เลขที่ ${student.number} - ${student.name} (${student.code})`);
+      clearCodeInput();
+      renderFastEntry();
+    }
+
+    function toggleSubmissionDirect(studentId, assignmentId) {
+      const student = students.find(s => s.id === studentId);
+      const asm = assignments.find(a => a.id === assignmentId);
+      const key = `${studentId}_${assignmentId}`;
+      const isSub = Boolean(submissions[key]);
+
+      if (isSub) {
+        delete submissions[key];
+        playSoundUndo();
+        showFeedback('undo', `ยกเลิกการส่งแล้ว: ${student.name}`);
+      } else {
+        submissions[key] = { submittedAt: new Date().toISOString() };
+        playSoundSuccess();
+        showFeedback('success', `บันทึกสำเร็จ! ${student.name}`);
+      }
+
+      const log = {
+        id: `${Date.now()}_${Math.random().toString(36).substring(2,6)}`,
+        studentId: student.id,
+        studentCode: student.code,
+        studentName: student.name,
+        classroom: student.classroom,
+        assignmentId: asm.id,
+        assignmentCode: asm.code,
+        assignmentTitle: asm.title,
+        timestamp: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        action: isSub ? 'unsubmit' : 'submit'
+      };
+      logs.unshift(log);
+      saveState();
+      renderFastEntry();
+    }
+
+    function showFeedback(type, message) {
+      const box = document.getElementById('fast-feedback-box');
+      let bg = 'bg-emerald-50 border-emerald-300 text-emerald-900';
+      let icon = '✅';
+      if (type === 'already') { bg = 'bg-amber-50 border-amber-300 text-amber-900'; icon = '⚠️'; }
+      if (type === 'error') { bg = 'bg-rose-50 border-rose-300 text-rose-900'; icon = '❌'; }
+      if (type === 'undo') { bg = 'bg-indigo-50 border-indigo-300 text-indigo-900'; icon = '↩️'; }
+
+      box.innerHTML = `
+        <div class="w-full p-3.5 rounded-xl border flex items-center space-x-3 ${bg}">
+          <span class="text-xl">${icon}</span>
+          <span class="font-bold text-xs sm:text-sm">${message}</span>
+        </div>
+      `;
+    }
+
+    function renderLogs() {
+      const container = document.getElementById('fast-logs-container');
+      const countEl = document.getElementById('fast-logs-count');
+      countEl.textContent = `${logs.length} รายการ`;
+      container.innerHTML = '';
+
+      if (logs.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 text-slate-400 text-xs">ยังไม่มีรายการตรวจงานในรอบนี้</div>`;
+        return;
+      }
+
+      logs.slice(0, 15).forEach(l => {
+        const item = document.createElement('div');
+        const roomShort = CLASSROOMS.find(c => c.id === l.classroom)?.shortName || l.classroom;
+        item.className = 'p-2.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between text-xs';
+        item.innerHTML = `
+          <div class="overflow-hidden">
+            <div class="flex items-center space-x-1.5">
+              <span class="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold text-[10px]">${roomShort}</span>
+              <span class="font-mono font-bold text-slate-700">${l.studentCode}</span>
+              <span class="text-slate-400 text-[10px]">${l.timestamp}</span>
+            </div>
+            <div class="font-semibold text-slate-900 truncate mt-0.5">${l.studentName}</div>
+            <div class="text-[10px] text-slate-500 truncate">[${l.assignmentCode}] ${l.assignmentTitle}</div>
+          </div>
+          <button onclick="undoLog('${l.id}')" class="px-2 py-1 rounded bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 font-semibold text-[11px] shrink-0 ml-2">
+            ยกเลิก
+          </button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function undoLog(logId) {
+      const idx = logs.findIndex(l => l.id === logId);
+      if (idx !== -1) {
+        const log = logs[idx];
+        const key = `${log.studentId}_${log.assignmentId}`;
+        if (log.action === 'submit') {
+          delete submissions[key];
+        } else {
+          submissions[key] = { submittedAt: new Date().toISOString() };
+        }
+        logs.splice(idx, 1);
+        saveState();
+        playSoundUndo();
+        showFeedback('undo', `ยกเลิกรายการแล้ว: ${log.studentName}`);
+        renderFastEntry();
+      }
+    }
+
+    // --- 2. MATRIX SUMMARY VIEW ---
+    function renderMatrixTable() {
+      const roomObj = CLASSROOMS.find(c => c.id === currentRoom);
+      document.getElementById('matrix-room-badge').textContent = roomObj.shortName;
+      document.getElementById('btn-export-room-name').textContent = roomObj.shortName;
+
+      const enabledAsms = assignments.filter(a => a.enabled).sort((a,b) => a.code.localeCompare(b.code));
+      document.getElementById('matrix-active-asms').textContent = enabledAsms.length;
+
+      // Table Header
+      const thead = document.getElementById('matrix-table-head');
+      thead.innerHTML = `
+        <tr>
+          <th class="py-3 px-3 font-bold sticky left-0 z-30 bg-slate-100 border-r border-slate-200 min-w-[85px] text-center">รหัส 4 หลัก</th>
+          <th class="py-3 px-4 font-bold sticky left-[85px] z-30 bg-slate-100 border-r border-slate-200 min-w-[190px]">เลขที่ & ชื่อ - นามสกุล</th>
+          ${enabledAsms.map(a => `
+            <th class="py-3 px-2 font-bold text-center border-r border-slate-200 min-w-[65px]" title="${a.title}">
+              <div class="font-mono text-indigo-700 font-extrabold text-xs">${a.code}</div>
+              <div class="text-[9px] text-slate-400 font-normal truncate max-w-[60px]">${a.title.replace(/^ใบงานที่\s*\d+:\s*/, '')}</div>
+            </th>
+          `).join('')}
+          <th class="py-3 px-3 font-bold text-center border-r border-slate-200 bg-emerald-50 text-emerald-800 min-w-[80px]">รวมส่งแล้ว</th>
+          <th class="py-3 px-3 font-bold text-center border-r border-slate-200 bg-rose-50 text-rose-800 min-w-[80px]">รวมค้างส่ง</th>
+          <th class="py-3 px-4 font-bold text-center bg-indigo-50 text-indigo-900 min-w-[110px]">คะแนนเก็บ (30)</th>
+        </tr>
+      `;
+
+      // Filter & Sort
+      let roomStudents = students.filter(s => s.classroom === currentRoom);
+      const q = document.getElementById('matrix-search')?.value.toLowerCase().trim() || '';
+      const filter = document.getElementById('matrix-filter')?.value || 'all';
+      const sort = document.getElementById('matrix-sort')?.value || 'number';
+
+      let studentsWithScore = roomStudents.map(s => {
+        let subCount = enabledAsms.filter(a => submissions[`${s.id}_${a.id}`]).length;
+        let score = enabledAsms.length > 0 ? (subCount / enabledAsms.length) * 30 : 0;
+        return { ...s, subCount, missing: enabledAsms.length - subCount, score };
+      });
+
+      if (q) {
+        studentsWithScore = studentsWithScore.filter(s => s.name.toLowerCase().includes(q) || s.code.includes(q) || String(s.number).includes(q));
+      }
+      if (filter === 'missing_only') studentsWithScore = studentsWithScore.filter(s => s.missing > 0);
+      if (filter === 'completed_only') studentsWithScore = studentsWithScore.filter(s => s.missing === 0);
+
+      studentsWithScore.sort((a,b) => {
+        if (sort === 'number') return a.number - b.number;
+        if (sort === 'code') return a.code.localeCompare(b.code);
+        if (sort === 'name') return a.name.localeCompare(b.name, 'th');
+        if (sort === 'score_desc') return b.score - a.score;
+        if (sort === 'score_asc') return a.score - b.score;
+        return 0;
+      });
+
+      // Update room summary badges
+      const avgScore = roomStudents.length > 0 ? (studentsWithScore.reduce((acc,s) => acc + s.score, 0) / roomStudents.length).toFixed(2) : '0.00';
+      const completeCount = roomStudents.filter(s => enabledAsms.every(a => submissions[`${s.id}_${a.id}`])).length;
+      document.getElementById('matrix-stat-avg-score').textContent = `${avgScore} / 30`;
+      document.getElementById('matrix-stat-complete-count').textContent = `${completeCount} คน`;
+
+      // Table Body
+      const tbody = document.getElementById('matrix-table-body');
+      tbody.innerHTML = '';
+      if (studentsWithScore.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${enabledAsms.length + 5}" class="py-8 text-center text-slate-400">ไม่พบรายชื่อนักเรียน</td></tr>`;
+      } else {
+        studentsWithScore.forEach(s => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition-colors';
+          tr.innerHTML = `
+            <td class="py-2.5 px-3 font-mono font-bold text-slate-900 text-center sticky left-0 z-10 bg-white border-r border-slate-200">
+              <span class="px-2 py-0.5 rounded-md bg-slate-100 text-indigo-700 border border-slate-200 text-xs">${s.code}</span>
+            </td>
+            <td class="py-2.5 px-4 font-medium sticky left-[85px] z-10 bg-white border-r border-slate-200">
+              <div class="flex items-center space-x-2">
+                <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-xs font-bold inline-flex items-center justify-center">${s.number}</span>
+                <span class="text-slate-900 font-semibold">${s.name}</span>
+              </div>
+            </td>
+            ${enabledAsms.map(a => {
+              const isSub = Boolean(submissions[`${s.id}_${a.id}`]);
+              return `
+                <td class="py-2 px-2 text-center border-r border-slate-100">
+                  <button onclick="toggleSubmissionDirect('${s.id}', '${a.id}'); renderMatrixTable();" class="w-7 h-7 mx-auto rounded-full flex items-center justify-center text-xs shadow-2xs ${isSub ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}" title="${isSub ? 'ส่งแล้ว (คลิกเพื่อยกเลิก)' : 'ค้างส่ง (คลิกเพื่อบันทึก)'}">
+                    ${isSub ? '🟢' : '🔴'}
+                  </button>
+                </td>
+              `;
+            }).join('')}
+            <td class="py-2.5 px-3 text-center border-r border-slate-200 font-bold bg-emerald-50/40 text-emerald-700">${s.subCount} / ${enabledAsms.length}</td>
+            <td class="py-2.5 px-3 text-center border-r border-slate-200 font-bold bg-rose-50/40 text-rose-700">${s.missing > 0 ? `<span class="text-rose-600 font-extrabold">${s.missing}</span>` : 'ครบ'}</td>
+            <td class="py-2.5 px-4 text-center font-extrabold font-mono text-base bg-indigo-50/40 text-indigo-900">
+              ${s.score.toFixed(1)} <span class="text-[11px] text-slate-400 font-normal">/ 30</span>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Table Footer
+      const tfoot = document.getElementById('matrix-table-foot');
+      tfoot.innerHTML = `
+        <tr>
+          <td class="py-3 px-3 text-center sticky left-0 z-30 bg-slate-100 border-r border-slate-200 text-xs">สรุป</td>
+          <td class="py-3 px-4 sticky left-[85px] z-30 bg-slate-100 border-r border-slate-200 text-xs">รวมส่ง (${roomStudents.length} คน)</td>
+          ${enabledAsms.map(a => {
+            const count = roomStudents.filter(s => submissions[`${s.id}_${a.id}`]).length;
+            const r = roomStudents.length > 0 ? Math.round((count / roomStudents.length) * 100) : 0;
+            return `
+              <td class="py-2 px-1 text-center border-r border-slate-200 text-xs">
+                <div class="font-bold text-slate-900">${count}</div>
+                <div class="text-[9px] text-slate-500">${r}%</div>
+              </td>
+            `;
+          }).join('')}
+          <td class="py-2.5 px-3 text-center border-r border-slate-200 bg-emerald-100 text-emerald-900 text-xs">ส่งรวม</td>
+          <td class="py-2.5 px-3 text-center border-r border-slate-200 bg-rose-100 text-rose-900 text-xs">ค้างรวม</td>
+          <td class="py-2.5 px-4 text-center bg-indigo-100 text-indigo-950 font-mono text-sm font-extrabold">เฉลี่ย ${avgScore}</td>
+        </tr>
+      `;
+    }
+
+    // --- 3. ASSIGNMENT MANAGER ---
+    function renderAssignments() {
+      const grid = document.getElementById('assignments-grid');
+      grid.innerHTML = '';
+      const activeCount = assignments.filter(a => a.enabled).length;
+      document.getElementById('asm-active-badge-count').textContent = `${activeCount} / 40`;
+
+      assignments.forEach((a, idx) => {
+        const subCount = students.filter(s => submissions[`${s.id}_${a.id}`]).length;
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-2xl border transition-all ${
+          a.enabled ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-50/70 border-slate-200/80 opacity-60'
+        }`;
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center space-x-2.5 flex-1 overflow-hidden">
+              <span class="w-10 h-10 rounded-xl flex items-center justify-center font-mono font-extrabold text-base shadow-2xs shrink-0 ${a.enabled ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}">
+                ${a.code}
+              </span>
+              <div class="flex-1 overflow-hidden">
+                <input
+                  type="text"
+                  value="${a.title}"
+                  onchange="updateAssignmentTitle('${a.id}', this.value)"
+                  class="font-semibold text-slate-900 text-xs sm:text-sm w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none"
+                />
+                <div class="text-[11px] text-slate-400 mt-0.5">ส่งแล้ว ${subCount}/${students.length} คน ใน 4 ห้อง</div>
+              </div>
+            </div>
+            <button onclick="toggleAssignmentEnable('${a.id}')" class="px-2 py-1 rounded-lg text-xs font-semibold shrink-0 ${a.enabled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-500'}">
+              ${a.enabled ? 'เปิดใช้' : 'ปิด'}
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function toggleAssignmentEnable(asmId) {
+      const a = assignments.find(x => x.id === asmId);
+      if (a) {
+        a.enabled = !a.enabled;
+        saveState();
+        renderAssignments();
+      }
+    }
+
+    function updateAssignmentTitle(asmId, newTitle) {
+      const a = assignments.find(x => x.id === asmId);
+      if (a && newTitle.trim()) {
+        a.title = newTitle.trim();
+        saveState();
+      }
+    }
+
+    function presetAssignments(count) {
+      assignments.forEach((a, idx) => {
+        a.enabled = idx < count;
+      });
+      saveState();
+      renderAssignments();
+    }
+
+    // --- 4. STUDENT MANAGER ---
+    function renderStudents() {
+      const roomObj = CLASSROOMS.find(c => c.id === currentRoom);
+      document.getElementById('student-room-badge').textContent = roomObj.shortName;
+      document.getElementById('student-table-room-title').textContent = roomObj.name;
+
+      CLASSROOMS.forEach(c => {
+        const cCount = students.filter(s => s.classroom === c.id).length;
+        document.querySelectorAll(`.student-room-count[data-room="${c.id}"]`).forEach(el => el.textContent = `${cCount} คน`);
+      });
+
+      const roomStudents = students.filter(s => s.classroom === currentRoom).sort((a,b) => a.number - b.number);
+      document.getElementById('student-table-count').textContent = roomStudents.length;
+
+      const tbody = document.getElementById('student-table-body');
+      tbody.innerHTML = '';
+      if (roomStudents.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">ยังไม่มีนักเรียนในห้องนี้</td></tr>`;
+      } else {
+        roomStudents.forEach(s => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition-colors';
+          tr.innerHTML = `
+            <td class="py-3 px-4 text-center font-bold text-slate-700">${s.number}</td>
+            <td class="py-3 px-4 text-center font-mono">
+              <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-extrabold border border-indigo-200 text-xs">${s.code}</span>
+            </td>
+            <td class="py-3 px-6 font-semibold text-slate-900">${s.name}</td>
+            <td class="py-3 px-4 text-center text-slate-500">${roomObj.shortName}</td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center space-x-1.5">
+                <button onclick="editStudent('${s.id}')" class="p-1 rounded text-slate-500 hover:text-indigo-600">✏️</button>
+                <button onclick="deleteStudent('${s.id}')" class="p-1 rounded text-slate-500 hover:text-rose-600">🗑️</button>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    function openAddStudentModal() {
+      const roomStudents = students.filter(s => s.classroom === currentRoom);
+      const nextNum = roomStudents.length > 0 ? Math.max(...roomStudents.map(s => s.number)) + 1 : 1;
+      document.getElementById('modal-student-title').textContent = `เพิ่มนักเรียน (${currentRoom})`;
+      document.getElementById('student-form-id').value = '';
+      document.getElementById('student-form-number').value = nextNum;
+      document.getElementById('student-form-code').value = generate4DigitCode(currentRoom, nextNum);
+      document.getElementById('student-form-name').value = '';
+      document.getElementById('modal-student').classList.remove('hidden');
+    }
+
+    function editStudent(studentId) {
+      const s = students.find(x => x.id === studentId);
+      if (!s) return;
+      document.getElementById('modal-student-title').textContent = 'แก้ไขข้อมูลนักเรียน';
+      document.getElementById('student-form-id').value = s.id;
+      document.getElementById('student-form-number').value = s.number;
+      document.getElementById('student-form-code').value = s.code;
+      document.getElementById('student-form-name').value = s.name;
+      document.getElementById('modal-student').classList.remove('hidden');
+    }
+
+    function closeStudentModal() {
+      document.getElementById('modal-student').classList.add('hidden');
+    }
+
+    function saveStudentForm(e) {
+      e.preventDefault();
+      const id = document.getElementById('student-form-id').value;
+      const number = parseInt(document.getElementById('student-form-number').value, 10);
+      const code = document.getElementById('student-form-code').value.trim();
+      const name = document.getElementById('student-form-name').value.trim();
+
+      if (id) {
+        const s = students.find(x => x.id === id);
+        if (s) {
+          s.number = number;
+          s.code = code;
+          s.name = name;
+        }
+      } else {
+        students.push({
+          id: `${currentRoom}_${Date.now()}_${Math.random().toString(36).substring(2,5)}`,
+          classroom: currentRoom,
+          number,
+          code,
+          name
+        });
+      }
+      saveState();
+      closeStudentModal();
+      renderStudents();
+    }
+
+    function deleteStudent(studentId) {
+      const s = students.find(x => x.id === studentId);
+      if (!s) return;
+      if (confirm(`ต้องการลบรายชื่อ "${s.name}" หรือไม่?`)) {
+        students = students.filter(x => x.id !== studentId);
+        saveState();
+        renderStudents();
+      }
+    }
+
+    function regenerateCodesCurrentRoom() {
+      students.forEach(s => {
+        if (s.classroom === currentRoom) {
+          s.code = generate4DigitCode(currentRoom, s.number);
+        }
+      });
+      saveState();
+      renderStudents();
+      alert('สร้างรหัส 4 หลักตามเลขที่เรียบร้อย');
+    }
+
+    function openBatchModal() {
+      document.getElementById('batch-textarea').value = '';
+      document.getElementById('modal-batch').classList.remove('hidden');
+    }
+
+    function closeBatchModal() {
+      document.getElementById('modal-batch').classList.add('hidden');
+    }
+
+    function executeBatchImport() {
+      const text = document.getElementById('batch-textarea').value.trim();
+      if (!text) {
+        alert('กรุณากรอกรายชื่อ');
+        return;
+      }
+      const replace = document.getElementById('batch-mode-replace').checked;
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      const parsed = [];
+      let startNum = replace ? 1 : (students.filter(s => s.classroom === currentRoom).length + 1);
+
+      lines.forEach((line, idx) => {
+        let num = startNum + idx;
+        let name = line;
+        const match = line.match(/^(\d+)[\.\s\:\-]+(.+)$/);
+        if (match) {
+          num = parseInt(match[1], 10);
+          name = match[2].trim();
+        }
+        parsed.push({
+          id: `${currentRoom}_${Date.now()}_${idx}`,
+          classroom: currentRoom,
+          number: num,
+          code: generate4DigitCode(currentRoom, num),
+          name: name
+        });
+      });
+
+      if (replace) {
+        students = students.filter(s => s.classroom !== currentRoom).concat(parsed);
+      } else {
+        students = students.concat(parsed);
+      }
+
+      saveState();
+      closeBatchModal();
+      renderStudents();
+      alert(`นำเข้ารายชื่อสำเร็จ ${parsed.length} คน`);
+    }
+
+    // --- 5. EXCEL EXPORT (SheetJS) ---
+    function exportExcelCurrentRoom() {
+      exportExcel([currentRoom]);
+    }
+
+    function exportExcelAll() {
+      exportExcel(['p4_1', 'p4_2', 'p4_3', 'p4_4']);
+    }
+
+    function exportExcel(roomIds) {
+      if (typeof XLSX === 'undefined') {
+        alert('ไลบรารี SheetJS กำลังโหลด กรุณาลองใหม่อีกครั้ง');
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+      const enabledAsms = assignments.filter(a => a.enabled).sort((a,b) => a.code.localeCompare(b.code));
+
+      roomIds.forEach(roomId => {
+        const roomObj = CLASSROOMS.find(c => c.id === roomId);
+        const rStudents = students.filter(s => s.classroom === roomId).sort((a,b) => a.number - b.number);
+
+        const headers = [
+          'รหัสนักเรียน', 'เลขที่', 'ชื่อ - นามสกุล',
+          ...enabledAsms.map(a => `[${a.code}] ${a.title}`),
+          'ส่งแล้ว (ใบ)', 'ค้างส่ง (ใบ)', 'คะแนนเก็บ (30)'
+        ];
+
+        const rows = rStudents.map(s => {
+          let count = 0;
+          const checks = enabledAsms.map(a => {
+            const isSub = Boolean(submissions[`${s.id}_${a.id}`]);
+            if (isSub) { count++; return '✓'; }
+            return '-';
+          });
+          const score = enabledAsms.length > 0 ? Number(((count / enabledAsms.length) * 30).toFixed(2)) : 0;
+          return [s.code, s.number, s.name, ...checks, count, enabledAsms.length - count, score];
+        });
+
+        const sheetData = [
+          [`รายงานการส่งงานและคะแนนเก็บ - ${roomObj.name}`],
+          [`เกณฑ์คะแนน: ใบงานที่เปิดใช้ ${enabledAsms.length} ใบงาน (คะแนนเต็ม 30 คะแนน)`],
+          [`วันที่ส่งออก: ${new Date().toLocaleDateString('th-TH')}`],
+          [],
+          headers,
+          ...rows
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(sheetData);
+        XLSX.utils.book_append_sheet(wb, ws, roomObj.shortName);
+      });
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const name = roomIds.length === 1 ? CLASSROOMS.find(c => c.id === roomIds[0]).shortName : 'ทุกห้อง';
+      XLSX.writeFile(wb, `รายงานส่งงาน_ป4_${name}_${dateStr}.xlsx`);
+    }
+
+    // --- 6. BACKUP MODAL LOGIC ---
+    function openBackupModal() {
+      document.getElementById('modal-backup').classList.remove('hidden');
+    }
+    function closeBackupModal() {
+      document.getElementById('modal-backup').classList.add('hidden');
+    }
+
+    function downloadBackupJSON() {
+      const data = { app: 'KruCheck P.4', date: new Date().toISOString(), students, assignments, submissions, logs };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `krucheck_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function uploadBackupJSON(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const json = JSON.parse(evt.target.result);
+          if (json.students && json.assignments && json.submissions) {
+            students = json.students;
+            assignments = json.assignments;
+            submissions = json.submissions;
+            logs = json.logs || [];
+            saveState();
+            closeBackupModal();
+            switchTab(currentTab);
+            alert('กู้คืนข้อมูลสำเร็จ');
+          }
+        } catch(err) {
+          alert('ไฟล์สำรองไม่ถูกต้อง');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetToDemoData() {
+      if (confirm('คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นตัวอย่างหรือไม่?')) {
+        students = getInitialStudents();
+        assignments = getInitialAssignments();
+        submissions = getInitialSubmissions(students, assignments);
+        logs = [];
+        saveState();
+        closeBackupModal();
+        switchTab(currentTab);
+        alert('รีเซ็ตข้อมูลตัวอย่างเรียบร้อย');
+      }
+    }
+
+    // --- INITIAL BOOTSTRAP ---
+    window.addEventListener('DOMContentLoaded', () => {
+      updateSoundUI();
+      updateNavbarBadges();
+      setActiveClassroom('p4_1');
+      switchTab('fast-entry');
+    });
+  </script>
+</body>
+</html>
